@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartMouse Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        .status-item {
+            text-align: center;
+        }
+        .status-value {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        input, button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        input {
+            flex: 1;
+            min-width: 300px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background: #f9f9f9;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .screenshot-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .screenshot {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .detection-info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e7f3ff;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐭 SmartMouse Dashboard</h1>
+        
+        <div class="status">
+            <div class="status-item">
+                <div>Vision Ready</div>
+                <div id="vision-status" class="status-value">-</div>
+            </div>
+            <div class="status-item">
+                <div>API Configured</div>
+                <div id="api-status" class="status-value">-</div>
+            </div>
+            <div class="status-item">
+                <div>Is Running</div>
+                <div id="running-status" class="status-value">-</div>
+            </div>
+            <div class="status-item">
+                <div>Iteration</div>
+                <div id="iteration-status" class="status-value">-</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <input type="text" id="goal-input" placeholder="Enter your goal (e.g., 'Open Chrome and search for cats')">
+            <button onclick="runGoal()">Run Goal</button>
+            <button onclick="stopGoal()" id="stop-btn" disabled>Stop</button>
+            <button onclick="takeScreenshot()">Take Screenshot</button>
+            <button onclick="initVision()">Init Vision</button>
+        </div>
+        
+        <div class="log" id="log">SmartMouse dashboard loaded. Connect to the backend to start.</div>
+        
+        <div class="screenshot-container">
+            <img id="screenshot-img" class="screenshot" style="display:none;" alt="Latest screenshot">
+            <div id="detection-info" class="detection-info" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:7891';
+        let logDiv = document.getElementById('log');
+        let isRunning = false;
+
+        // Update status every 2 seconds
+        setInterval(updateStatus, 2000);
+        updateStatus(); // Initial update
+
+        function addToLog(message) {
+            logDiv.textContent += '\n' + new Date().toLocaleTimeString() + ' - ' + message;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function updateStatus() {
+            try {
+                const response = await fetch(API_BASE + '/status');
+                const data = await response.json();
+                
+                document.getElementById('vision-status').textContent = data.vision_ready ? '✅' : '❌';
+                document.getElementById('api-status').textContent = data.api_configured ? '✅' : '❌';
+                document.getElementById('running-status').textContent = data.is_running ? '✅' : '❌';
+                document.getElementById('iteration-status').textContent = data.iteration || 0;
+                
+                if (data.is_running !== isRunning) {
+                    isRunning = data.is_running;
+                    document.getElementById('stop-btn').disabled = !isRunning;
+                }
+                
+                if (data.last_error) {
+                    addToLog('Error: ' + data.last_error);
+                }
+            } catch (e) {
+                console.error('Status update failed:', e);
+            }
+        }
+
+        async function runGoal() {
+            const goal = document.getElementById('goal-input').value.trim();
+            if (!goal) {
+                addToLog('Please enter a goal');
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_BASE + '/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ goal: goal })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    addToLog('✅ Started goal: ' + goal);
+                } else {
+                    addToLog('❌ Failed to start: ' + data.error);
+                }
+            } catch (e) {
+                addToLog('❌ Error starting goal: ' + e.message);
+            }
+        }
+
+        async function stopGoal() {
+            try {
+                const response = await fetch(API_BASE + '/stop', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                addToLog('⏹️ Stopped: ' + data.message);
+            } catch (e) {
+                addToLog('❌ Error stopping: ' + e.message);
+            }
+        }
+
+        async function takeScreenshot() {
+            addToLog('📸 Taking screenshot...');
+            try {
+                const response = await fetch(API_BASE + '/screenshot');
+                const data = await response.json();
+                
+                if (data.screenshot_path) {
+                    // Display the screenshot
+                    document.getElementById('screenshot-img').src = 'file://' + data.screenshot_path;
+                    document.getElementById('screenshot-img').style.display = 'block';
+                    
+                    // Display detection info
+                    const detectionInfo = document.getElementById('detection-info');
+                    detectionInfo.innerHTML = `
+                        <strong>Screenshot Info:</strong><br>
+                        Size: ${data.screen_size.width}x${data.screen_size.height}<br>
+                        Objects detected: ${data.detected_objects.length}<br>
+                        <details>
+                            <summary>View Details</summary>
+                            <pre>${JSON.stringify(data.detected_objects, null, 2)}</pre>
+                        </details>
+                    `;
+                    detectionInfo.style.display = 'block';
+                    
+                    addToLog('✅ Screenshot taken with ' + data.detected_objects.length + ' objects detected');
+                } else {
+                    addToLog('❌ Screenshot failed: ' + data.error);
+                }
+            } catch (e) {
+                addToLog('❌ Error taking screenshot: ' + e.message);
+            }
+        }
+
+        async function initVision() {
+            addToLog('🔄 Initializing vision model...');
+            try {
+                const response = await fetch(API_BASE + '/init', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    addToLog('✅ Vision model loaded');
+                } else {
+                    addToLog('❌ Vision init failed: ' + data.message);
+                }
+            } catch (e) {
+                addToLog('❌ Error initializing vision: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stealth Detection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .detected { background-color: #ffe6e6; }
+        .not-detected { background-color: #e6ffe6; }
+        .info { background-color: #f0f0f0; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Browser Fingerprinting & Automation Detection Test</h1>
+    
+    <div class="section info">
+        <h3>Basic Browser Info</h3>
+        <table id="basicInfo">
+            <tr><td>User Agent</td><td id="ua"></td></tr>
+            <tr><td>Platform</td><td id="platform"></td></tr>
+            <tr><td>Languages</td><td id="languages"></td></tr>
+            <tr><td>Vendor</td><td id="vendor"></td></tr>
+        </table>
+    </div>
+
+    <div class="section" id="webdriverSection">
+        <h3>WebDriver Detection Tests</h3>
+        <ul id="webdriverTests"></ul>
+    </div>
+
+    <div class="section" id="pluginsSection">
+        <h3>Plugins & MIME Types</h3>
+        <div>
+            <h4>Navigator Plugins:</h4>
+            <pre id="pluginsInfo"></pre>
+        </div>
+        <div>
+            <h4>Navigator MIME Types:</h4>
+            <pre id="mimeTypesInfo"></pre>
+        </div>
+    </div>
+
+    <div class="section" id="canvasSection">
+        <h3>Canvas Fingerprinting</h3>
+        <canvas id="testCanvas" width="200" height="100"></canvas>
+        <p>Canvas fingerprint: <span id="canvasHash"></span></p>
+    </div>
+
+    <div class="section" id="webglSection">
+        <h3>WebGL Fingerprinting</h3>
+        <p>WebGL vendor: <span id="webglVendor"></span></p>
+        <p>WebGL renderer: <span id="webglRenderer"></span></p>
+    </div>
+
+    <div class="section" id="otherSection">
+        <h3>Other Detection Methods</h3>
+        <ul id="otherTests"></ul>
+    </div>
+
+    <script>
+        // Basic info
+        document.getElementById('ua').textContent = navigator.userAgent;
+        document.getElementById('platform').textContent = navigator.platform;
+        document.getElementById('languages').textContent = navigator.languages ? navigator.languages.join(', ') : navigator.language;
+        document.getElementById('vendor').textContent = navigator.vendor;
+
+        // WebDriver detection tests
+        const webdriverTests = [
+            { name: 'navigator.webdriver', test: () => navigator.webdriver },
+            { name: 'window.webdriver', test: () => window.webdriver },
+            { name: '__webdriver_evaluate', test: () => typeof window.__webdriver_evaluate !== 'undefined' },
+            { name: '__selenium_evaluate', test: () => typeof window.__selenium_evaluate !== 'undefined' },
+            { name: '__driver_evaluate', test: () => typeof window.__driver_evaluate !== 'undefined' },
+            { name: 'document.documentElement.getAttribute("webdriver")', test: () => document.documentElement.getAttribute('webdriver') },
+            { name: 'navigator.plugins.length', test: () => navigator.plugins.length },
+            { name: 'navigator.plugins[0].filename', test: () => navigator.plugins[0] ? navigator.plugins[0].filename : 'none' }
+        ];
+
+        const webdriverList = document.getElementById('webdriverTests');
+        webdriverTests.forEach(test => {
+            const li = document.createElement('li');
+            const result = test.test();
+            const isDetected = result !== undefined && result !== null && result !== false && result !== '';
+            li.innerHTML = `<strong>${test.name}</strong>: ${JSON.stringify(result)} ${isDetected ? '🔴 DETECTED' : '🟢 OK'}`;
+            li.className = isDetected ? 'detected' : 'not-detected';
+            webdriverList.appendChild(li);
+        });
+
+        // Plugins and MIME types info
+        document.getElementById('pluginsInfo').textContent = JSON.stringify({
+            length: navigator.plugins.length,
+            plugins: Array.from(navigator.plugins).map(p => ({
+                name: p.name,
+                filename: p.filename,
+                description: p.description
+            }))
+        }, null, 2);
+
+        document.getElementById('mimeTypesInfo').textContent = JSON.stringify({
+            length: navigator.mimeTypes.length,
+            mimeTypes: Array.from(navigator.mimeTypes).map(m => ({
+                type: m.type,
+                suffixes: m.suffixes,
+                description: m.description
+            }))
+        }, null, 2);
+
+        // Canvas fingerprinting
+        const canvas = document.getElementById('testCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#f60';
+        ctx.fillRect(125, 1, 62, 20);
+        ctx.fillStyle = '#069';
+        ctx.fillText('Canvas fingerprinting test', 2, 15);
+        ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+        ctx.fillRect(125, 30, 62, 20);
+
+        const canvasData = canvas.toDataURL();
+        document.getElementById('canvasHash').textContent = btoa(canvasData).substring(0, 50) + '...';
+
+        // WebGL fingerprinting
+        try {
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (gl) {
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if (debugInfo) {
+                    const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                    const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                    document.getElementById('webglVendor').textContent = vendor;
+                    document.getElementById('webglRenderer').textContent = renderer;
+                } else {
+                    document.getElementById('webglVendor').textContent = 'Extension not available';
+                    document.getElementById('webglRenderer').textContent = 'Extension not available';
+                }
+            } else {
+                document.getElementById('webglVendor').textContent = 'WebGL not supported';
+                document.getElementById('webglRenderer').textContent = 'WebGL not supported';
+            }
+        } catch (e) {
+            document.getElementById('webglVendor').textContent = 'Error: ' + e.message;
+            document.getElementById('webglRenderer').textContent = 'Error: ' + e.message;
+        }
+
+        // Other detection methods
+        const otherTests = [
+            { name: 'window.outerHeight', test: () => window.outerHeight },
+            { name: 'window.outerWidth', test: () => window.outerWidth },
+            { name: 'window.innerHeight', test: () => window.innerHeight },
+            { name: 'window.innerWidth', test: () => window.innerWidth },
+            { name: 'screen.availHeight', test: () => screen.availHeight },
+            { name: 'screen.availWidth', test: () => screen.availWidth },
+            { name: 'navigator.hardwareConcurrency', test: () => navigator.hardwareConcurrency },
+            { name: 'navigator.deviceMemory', test: () => navigator.deviceMemory },
+            { name: 'navigator.connection', test: () => navigator.connection ? 'exists' : 'not available' }
+        ];
+
+        const otherList = document.getElementById('otherTests');
+        otherTests.forEach(test => {
+            const li = document.createElement('li');
+            const result = test.test();
+            li.innerHTML = `<strong>${test.name}</strong>: ${JSON.stringify(result)}`;
+            otherList.appendChild(li);
+        });
+    </script>
+</body>
+</html>

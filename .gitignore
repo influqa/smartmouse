@@ -1,0 +1,65 @@
+# Sensitive files - DO NOT COMMIT
+config.json
+*.env
+.env.*
+.env.local
+.env.development
+.env.production
+
+# API keys and secrets
+secrets/
+credentials/
+*.key
+*.pem
+
+# Continue extension config (may contain personal settings)
+.continue/
+
+# Build outputs
+dist/
+build/
+*.js
+*.js.map
+*.d.ts
+*.d.ts.map
+
+# Node modules
+node_modules/
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and screenshots - DO NOT COMMIT (contains user data)
+logs/
+screenshots/
+*.log
+npm-debug.log*
+*.jsonl
+
+# Test outputs
+coverage/
+
+# Model cache (large files - 1GB+)
+models/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Watchdog state
+watchdog-state.json
+watchdog.jsonl
+
+# Recorded workflows (user data)
+recorded-workflows.json
+workflow-memory.json
+task-reports.jsonl
+benchmark-*.json

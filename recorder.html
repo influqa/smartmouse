@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartMouse Recorder</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f3f4f6; color: #111827; }
+    .container { max-width: 1100px; margin: 24px auto; background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,.08); }
+    h1 { margin: 0 0 12px; }
+    .muted { color: #6b7280; font-size: 13px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+    input, select, textarea, button { border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 10px; font-size: 14px; }
+    input, select, textarea { background: #fff; }
+    button { background: #111827; color: #fff; cursor: pointer; }
+    button.secondary { background: #fff; color: #111827; }
+    .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; margin-top: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border-bottom: 1px solid #e5e7eb; text-align: left; padding: 8px; vertical-align: top; }
+    .mono { font-family: Consolas, Menlo, monospace; }
+    .pill { display: inline-block; border: 1px solid #d1d5db; border-radius: 999px; padding: 2px 8px; font-size: 12px; }
+    .grow { flex: 1; min-width: 220px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 SmartMouse Recorder (Hardcoded Workflow Mode)</h1>
+    <div class="muted">Use this page to record deterministic steps (click/type/wait), then replay them with Chrome-first hardcoded and optional variables like <span class="mono">{{comment_text}}</span>.</div>
+
+    <div class="card">
+      <h3 style="margin-top:0">1) Template Info</h3>
+      <div class="row">
+        <input id="templateTitle" class="grow" placeholder="Template title (e.g., Comment on YouTube video)" />
+        <input id="templateName" placeholder="template-name (auto if empty)" />
+        <input id="startDelay" type="number" min="0" value="3" style="width:120px" title="Start delay seconds" />
+        <input id="defaultStepDelay" type="number" min="0" value="20000" style="width:160px" title="Default step delay ms" />
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="openChromeFirst" checked /> Open Chrome first (hardcoded)</label>
+        <label><input type="checkbox" id="stopOnError" checked /> Stop on first error</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">2) Live Capture (Automatic)</h3>
+      <div class="row">
+        <button id="startLive" type="button">Start Live Capture</button>
+        <button id="stopLive" type="button" class="secondary">Stop & Save</button>
+        <span id="liveStatus" class="pill">idle</span>
+        <span id="liveCount" class="muted">events: 0</span>
+      </div>
+      <div class="muted">Click <b>Start Live Capture</b>, do your real mouse/keyboard steps anywhere, then press <b>F8</b> to stop and save without returning here. (<b>Stop & Save</b> also works, but returning can add extra clicks.)</div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">3) Add Step (Manual)</h3>
+      <div class="row">
+        <select id="actionType">
+          <option value="click">click</option>
+          <option value="double_click">double_click</option>
+          <option value="right_click">right_click</option>
+          <option value="type">type</option>
+          <option value="press">press</option>
+          <option value="hotkey">hotkey</option>
+          <option value="scroll">scroll</option>
+          <option value="wait">wait</option>
+          <option value="open_url">open_url</option>
+          <option value="open_app">open_app</option>
+          <option value="move">move</option>
+        </select>
+        <input id="x" type="number" placeholder="x" style="width:90px" />
+        <input id="y" type="number" placeholder="y" style="width:90px" />
+        <button id="captureCursor" type="button" class="secondary">Capture Cursor</button>
+        <input id="text" class="grow" placeholder="text / url / app / key / combo (comma for hotkey)" />
+        <input id="delayBefore" type="number" min="0" placeholder="delay_before_ms" style="width:140px" />
+        <button id="addStep" type="button">Add Step</button>
+      </div>
+      <div class="muted">Tip: For comments use text like <span class="mono">{{comment_text}}</span>. For waits use action <span class="mono">wait</span> + text field seconds value.</div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">4) Steps</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Action</th>
+            <th>Payload</th>
+            <th>Delay (ms)</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="stepsBody"></tbody>
+      </table>
+      <div class="row" style="margin-top:10px">
+        <button id="saveTemplate" type="button">Save Template</button>
+        <button id="clearSteps" type="button" class="secondary">Clear Steps</button>
+        <button id="refreshTemplates" type="button" class="secondary">Refresh Templates</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">5) Run Template</h3>
+      <div class="row">
+        <select id="templateSelect" class="grow"></select>
+        <input id="varComment" class="grow" placeholder="comment_text variable" />
+        <input id="varKeyword" placeholder="keyword variable" />
+        <input id="runStartDelay" type="number" min="0" value="3" style="width:120px" />
+        <button id="runTemplate" type="button">Run</button>
+      </div>
+      <div class="muted">Playback uses your saved hardcoded steps. Start delay gives you time to prepare Chrome/page.</div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Logs</h3>
+      <div id="logs" class="mono" style="white-space:pre-wrap; max-height:260px; overflow:auto"></div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin;
+    const steps = [];
+
+    const byId = (id) => document.getElementById(id);
+    const logs = byId('logs');
+
+    function log(msg, isError = false) {
+      const time = new Date().toLocaleTimeString();
+      logs.textContent += `[${time}] ${msg}\n`;
+      logs.scrollTop = logs.scrollHeight;
+      if (isError) console.error(msg); else console.log(msg);
+    }
+
+    async function apiJson(url, options) {
+      const res = await fetch(url, options);
+      const contentType = (res.headers.get('content-type') || '').toLowerCase();
+      const text = await res.text();
+
+      if (!contentType.includes('application/json')) {
+        throw new Error(`Expected JSON but got ${contentType || 'unknown content type'}. Likely old SmartMouse port. Open recorder from active updated port.`);
+      }
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error('Response was not valid JSON. Check SmartMouse instance/port.');
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || `HTTP ${res.status}`);
+      }
+
+      return data;
+    }
+
+    function setLiveStatus(active, eventCount) {
+      const status = byId('liveStatus');
+      const count = byId('liveCount');
+      status.textContent = active ? 'recording' : 'idle';
+      status.style.borderColor = active ? '#059669' : '#d1d5db';
+      status.style.color = active ? '#059669' : '#111827';
+      count.textContent = `events: ${eventCount || 0}`;
+    }
+
+    async function pollLiveStatus() {
+      try {
+        const data = await apiJson(`${API}/recordings/live/status`);
+        setLiveStatus(Boolean(data.active), Number(data.event_count || 0));
+      } catch {
+        setLiveStatus(false, 0);
+      }
+    }
+
+    function renderSteps() {
+      const body = byId('stepsBody');
+      body.innerHTML = '';
+      steps.forEach((step, index) => {
+        const tr = document.createElement('tr');
+        const payload = JSON.stringify(step, null, 0);
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td><span class="pill">${step.action}</span></td>
+          <td class="mono">${payload}</td>
+          <td>${step.delay_before_ms || 0}</td>
+          <td><button data-i="${index}" class="secondary remove-step" type="button">Remove</button></td>
+        `;
+        body.appendChild(tr);
+      });
+
+      document.querySelectorAll('.remove-step').forEach((btn) => {
+        btn.onclick = () => {
+          const i = Number(btn.dataset.i);
+          steps.splice(i, 1);
+          renderSteps();
+        };
+      });
+    }
+
+    function getNameFromTitle(title) {
+      return String(title || '')
+        .trim().toLowerCase()
+        .replace(/[^a-z0-9-_]+/g, '-')
+        .replace(/-{2,}/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 80);
+    }
+
+    async function refreshTemplates() {
+      try {
+        const data = await apiJson(`${API}/recordings`);
+        const select = byId('templateSelect');
+        select.innerHTML = '';
+        (data.templates || []).forEach((tpl) => {
+          const option = document.createElement('option');
+          option.value = tpl.name;
+          option.textContent = `${tpl.title} (${tpl.step_count} steps)`;
+          select.appendChild(option);
+        });
+        log(`Loaded ${data.count || 0} templates.`);
+      } catch (e) {
+        log(`Failed to load templates: ${e.message}`, true);
+      }
+    }
+
+    byId('captureCursor').onclick = async () => {
+      try {
+        const pos = await apiJson(`${API}/cursor`);
+        if (!pos.success) {
+          log(`Cursor capture failed: ${pos.message}`, true);
+          return;
+        }
+        byId('x').value = pos.x;
+        byId('y').value = pos.y;
+        log(`Captured cursor (${pos.x}, ${pos.y}).`);
+      } catch (e) {
+        log(`Cursor capture error: ${e.message}`, true);
+      }
+    };
+
+    byId('addStep').onclick = () => {
+      const action = byId('actionType').value;
+      const x = byId('x').value;
+      const y = byId('y').value;
+      const textRaw = byId('text').value;
+      const delayRaw = byId('delayBefore').value;
+      const defaultDelay = Number(byId('defaultStepDelay').value || 0);
+
+      const step = { action };
+      if (x !== '') step.x = Number(x);
+      if (y !== '') step.y = Number(y);
+
+      if (action === 'type') step.text = textRaw;
+      else if (action === 'press') step.key = textRaw || 'enter';
+      else if (action === 'hotkey') step.combo = textRaw.split(',').map(s => s.trim()).filter(Boolean);
+      else if (action === 'scroll') {
+        const low = (textRaw || '').toLowerCase();
+        step.direction = low === 'up' ? 'up' : 'down';
+        step.amount = 3;
+      } else if (action === 'wait') step.seconds = Number(textRaw || 2);
+      else if (action === 'open_url') step.url = textRaw;
+      else if (action === 'open_app') step.app_name = textRaw || 'chrome';
+      else if (textRaw) step.note = textRaw;
+
+      const delay = delayRaw === '' ? defaultDelay : Number(delayRaw);
+      if (Number.isFinite(delay) && delay > 0) step.delay_before_ms = delay;
+
+      steps.push(step);
+      renderSteps();
+      log(`Added step: ${action}`);
+    };
+
+    byId('clearSteps').onclick = () => {
+      steps.length = 0;
+      renderSteps();
+      log('Cleared all steps.');
+    };
+
+    byId('saveTemplate').onclick = async () => {
+      const title = byId('templateTitle').value.trim();
+      const explicitName = byId('templateName').value.trim();
+      const name = explicitName || getNameFromTitle(title);
+      if (!title) {
+        log('Template title is required.', true);
+        return;
+      }
+      if (!name) {
+        log('Template name is empty after normalization.', true);
+        return;
+      }
+      if (steps.length === 0) {
+        log('Add at least one step before saving.', true);
+        return;
+      }
+
+      const payload = {
+        name,
+        title,
+        open_chrome_first: byId('openChromeFirst').checked,
+        stop_on_error: byId('stopOnError').checked,
+        start_delay_seconds: Number(byId('startDelay').value || 3),
+        steps
+      };
+
+      try {
+        const data = await apiJson(`${API}/recordings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!data.success) {
+          log(`Save failed: ${data.error || 'unknown error'}`, true);
+          return;
+        }
+        log(`Saved template: ${data.template.name}`);
+        await refreshTemplates();
+      } catch (e) {
+        log(`Save error: ${e.message}`, true);
+      }
+    };
+
+    byId('refreshTemplates').onclick = refreshTemplates;
+
+    byId('startLive').onclick = async () => {
+      const title = byId('templateTitle').value.trim();
+      const explicitName = byId('templateName').value.trim();
+      const name = explicitName || getNameFromTitle(title);
+      if (!title) {
+        log('Template title is required before live capture.', true);
+        return;
+      }
+      try {
+        const payload = {
+          title,
+          name,
+          open_chrome_first: byId('openChromeFirst').checked,
+          stop_on_error: byId('stopOnError').checked,
+          start_delay_seconds: Number(byId('startDelay').value || 3),
+          default_delay_ms: Number(byId('defaultStepDelay').value || 20000),
+          initial_ignore_ms: 3000
+        };
+        const data = await apiJson(`${API}/recordings/live/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!data.success) {
+          log(`Live start failed: ${data.error || 'unknown error'}`, true);
+          return;
+        }
+        log('Live capture started. Chrome opened first. Perform your task, then press F8 anywhere to stop & save.');
+        await pollLiveStatus();
+      } catch (e) {
+        log(`Live start error: ${e.message}`, true);
+      }
+    };
+
+    byId('stopLive').onclick = async () => {
+      try {
+        const data = await apiJson(`${API}/recordings/live/stop`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ save: true })
+        });
+        if (!data.success) {
+          log(`Live stop failed: ${data.error || 'unknown error'}`, true);
+          return;
+        }
+
+        const tpl = data.template;
+        if (tpl && Array.isArray(tpl.steps)) {
+          steps.length = 0;
+          tpl.steps.forEach((step) => steps.push(step));
+          renderSteps();
+          byId('templateName').value = tpl.name;
+          byId('templateTitle').value = tpl.title;
+          log(`Live capture saved: ${tpl.name} (${tpl.steps.length} steps).`);
+        } else {
+          log('Live capture stopped, but no template returned.', true);
+        }
+
+        await refreshTemplates();
+        await pollLiveStatus();
+      } catch (e) {
+        log(`Live stop error: ${e.message}`, true);
+      }
+    };
+
+    byId('runTemplate').onclick = async () => {
+      const templateName = byId('templateSelect').value;
+      if (!templateName) {
+        log('Select a template first.', true);
+        return;
+      }
+      const vars = {
+        comment_text: byId('varComment').value,
+        keyword: byId('varKeyword').value
+      };
+      const startDelay = Number(byId('runStartDelay').value || 3);
+      try {
+        log(`Running template ${templateName} with ${startDelay}s countdown...`);
+        const data = await apiJson(`${API}/recordings/${encodeURIComponent(templateName)}/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ vars, start_delay_seconds: startDelay })
+        });
+        if (!data.success) {
+          log(`Run failed: ${data.error || data.reason || 'unknown error'}`, true);
+          return;
+        }
+        log(`Run completed: status=${data.status} url=${data.final_url || 'n/a'}`);
+      } catch (e) {
+        log(`Run error: ${e.message}`, true);
+      }
+    };
+
+    refreshTemplates();
+    renderSteps();
+    setInterval(pollLiveStatus, 1500);
+    pollLiveStatus();
+    log('Recorder ready.');
+  </script>
+</body>
+</html>

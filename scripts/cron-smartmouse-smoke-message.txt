@@ -1,0 +1,34 @@
+SMARTMOUSE_CRON_SMOKE
+
+Before browser actions, read and follow:
+C:\Users\kevin\.openclaw\workspace\SMARTMOUSE_AGENT_SKILL.md
+
+SmartMouse contract (mandatory):
+- Base URL: http://localhost:7901
+- Health gate first: GET /health and require ok=true
+- Use POST /run with wait_for_completion=true
+- requesting_agent must be set
+- Use report JSON as source of truth
+- Use /links only for evidence URLs
+
+Task:
+1) Verify GET http://localhost:7901/health returns ok=true.
+2) Call POST http://localhost:7901/run with:
+   {
+     "goal": "Test connection - just return status ok",
+     "requesting_agent": "openclaw-cron-smoke",
+     "wait_for_completion": true,
+     "max_iterations": 8
+   }
+3) Return concise output with:
+   - run_id
+   - report.status
+   - report.completion_reason
+   - report.final_url
+   - report.iterations
+   - report.actions_executed
+   - report.workflow_memory_replay_steps_used
+
+Failure handling:
+- If health fails, return blocker with endpoint and stop.
+- Do not use non-SmartMouse browser tools.
