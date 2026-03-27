@@ -123,3 +123,48 @@ MIT License - See LICENSE file for details.
 ---
 
 **Made with 🖱️ + 🧠 by SmartMouse Team**
+
+## GitHub Integration
+
+The SmartMouse project includes GitHub integration capabilities that allow agents to programmatically interact with GitHub repositories. This enables automated repository creation, file management, issue tracking, and pull request management.
+
+For detailed information about the GitHub integration, see [GITHUB_INTEGRATION.md](./GITHUB_INTEGRATION.md).
+
+### Setting Up GitHub Access
+
+To use the GitHub integration features, you'll need to set up GitHub access:
+
+#### 1. VS Code GitHub Integration
+To connect VS Code to your GitHub account:
+
+1. Open VS Code
+2. Look for the Accounts icon in the bottom-left corner of the status bar
+3. Click on "Sign in with GitHub"
+4. Or use Command Palette (Ctrl+Shift+P) and type "GitHub: Sign In"
+5. Follow the browser-based authentication flow
+
+#### 2. Git Configuration
+Configure your Git credentials:
+```bash
+git config --global user.name "Your GitHub Username"
+git config --global user.email "your-email@example.com"
+```
+
+#### 3. SmartMouse GitHub Integration
+For the SmartMouse-specific GitHub integration:
+
+1. Run the setup script: `npx tsx setup-github-access.ts`
+2. This will open the GitHub token creation page in your browser
+3. Follow the instructions to create a personal access token
+4. Create a `github-config.json` file with your token
+5. Test the connection with `npx tsx test-github.ts`
+
+#### 4. Check Current Status
+To check your current GitHub access status, run:
+```bash
+npx tsx check-github-access.ts
+```
+
+This will verify if VS Code, Git, GitHub CLI, and SmartMouse GitHub integration are properly configured.
+
+
