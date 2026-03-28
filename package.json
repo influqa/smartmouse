@@ -9,15 +9,13 @@
     "start": "bun index.ts --port=7901",
     "start:watchdog": "powershell -ExecutionPolicy Bypass -File .\\scripts\\watchdog.ps1 -StopOnExit",
     "start:watchdog:detach": "powershell -ExecutionPolicy Bypass -File .\\scripts\\start-watchdog.ps1",
-    "enable:autostart": "powershell -ExecutionPolicy Bypass -File .\\scripts\\enable-autostart.ps1",
-    "yt:comments": "node scripts/playwright-youtube-comments.mjs"
+    "enable:autostart": "powershell -ExecutionPolicy Bypass -File .\\scripts\\enable-autostart.ps1"
   },
   "dependencies": {
     "@xenova/transformers": "^2.17.2",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "jimp": "^0.22.12",
-    "playwright-core": "^1.58.2",
     "screenshot-desktop": "^1.15.0",
     "sharp": "^0.34.5",
     "typescript": "^5.9.3"

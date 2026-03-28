@@ -4,8 +4,6 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { playwrightActions } from './playwright-actions';
-import { PlaywrightService } from './playwright-service';
 
 const execAsync = promisify(exec);
 
@@ -499,17 +497,6 @@ export function sleep(ms: number): Promise<void> {
 export async function executeAction(action: any): Promise<ActionResult> {
   const type = action.action?.toLowerCase();
   console.log(`🎮 Executing: ${type}`, action);
-
-  // Handle Playwright-specific actions first
-  const playwrightActionsSet = new Set([
-    'init_playwright', 'navigate', 'click_element', 'fill_field', 'find_element',
-    'wait_for_element', 'get_current_url', 'get_page_title', 'take_screenshot',
-    'execute_js', 'close_playwright'
-  ]);
-  
-  if (type.startsWith('pw_') || type.startsWith('playwright_') || playwrightActionsSet.has(type)) {
-    return playwrightActions.executePlaywrightAction(action);
-  }
 
   const blockedPointerActions = new Set([
     'move',
