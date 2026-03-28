@@ -1,11 +1,21 @@
 /**
  * SmartMouse Actions - Mouse/Keyboard Control for Windows
+ * 
+ * Features:
+ * - Human-like mouse movements with Bezier curves
+ * - Natural acceleration/deceleration
+ * - Micro-jitter simulation
+ * - Variable speed profiles
  */
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { humanMoveMouse } from './human-behavior';
 
 const execAsync = promisify(exec);
+
+// Configuration for human-like movements
+const HUMAN_MOVEMENT_ENABLED = true;
 
 export interface ActionResult {
   success: boolean;
@@ -91,17 +101,28 @@ export async function getScreenSize(): Promise<{ width: number; height: number }
   }
 }
 
-export async function moveMouse(x: number, y: number): Promise<ActionResult> {
+export async function moveMouse(x: number, y: number, useHumanMovement: boolean = true): Promise<ActionResult> {
   try {
     if (isWindows) {
-      await runPowerShell(`
-        $sig = @"
-        [DllImport("user32.dll")]
-        public static extern bool SetCursorPos(int X, int Y);
+      // Use human-like movement with Bezier curves and natural acceleration
+      if (HUMAN_MOVEMENT_ENABLED && useHumanMovement) {
+        // Get current position first
+        const currentPos = await getCursorPosition();
+        const startX = currentPos.success && currentPos.x !== null ? currentPos.x : 0;
+        const startY = currentPos.success && currentPos.y !== null ? currentPos.y : 0;
+        
+        await humanMoveMouse(startX, startY, Math.round(x), Math.round(y));
+      } else {
+        // Direct movement (robotic, instant)
+        await runPowerShell(`
+          $sig = @"
+          [DllImport("user32.dll")]
+          public static extern bool SetCursorPos(int X, int Y);
 "@;
-        $type = Add-Type -MemberDefinition $sig -Name NativeMouse -Namespace SmartMouse -PassThru;
-        [SmartMouse.NativeMouse]::SetCursorPos(${Math.round(x)}, ${Math.round(y)}) | Out-Null;
-      `);
+          $type = Add-Type -MemberDefinition $sig -Name NativeMouse -Namespace SmartMouse -PassThru;
+          [SmartMouse.NativeMouse]::SetCursorPos(${Math.round(x)}, ${Math.round(y)}) | Out-Null;
+        `);
+      }
     }
     return { success: true, action: 'move', message: `Moved to (${x}, ${y})`, timestamp: Date.now() };
   } catch (e: any) {
