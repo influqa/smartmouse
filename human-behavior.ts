@@ -2,6 +2,13 @@
  * Human Behavior Simulation for SmartMouse
  * Provides realistic mouse movements, typing patterns, and scrolling behavior
  * for natural interaction patterns
+ *
+ * Features:
+ * - Bezier curve-based mouse paths
+ * - Micro-jitter simulation
+ * - Natural acceleration/deceleration
+ * - Variable speed profiles
+ * - Gaussian-distributed delays
  */
 
 // Random number between min and max
@@ -19,7 +26,7 @@ export function randomDelay(mean: number, stdDev: number): number {
 }
 
 // Bezier curve point calculation
-interface Point {
+export interface Point {
   x: number;
   y: number;
 }
@@ -68,6 +75,141 @@ export function generateBezierPath(
   }
 
   return points;
+}
+
+// Configuration for human-like movement generation
+export interface HumanMovementConfig {
+  useBezier: boolean;
+  addJitter: boolean;
+  jitterAmplitude: number;
+  variableSpeed: boolean;
+  baseDelay: number;
+  acceleration: boolean;
+}
+
+// Generate human-like mouse path with jitter, acceleration, and variable speed
+export function generateHumanPath(
+  start: Point,
+  end: Point,
+  config: HumanMovementConfig
+): { points: Point[]; delays: number[] } {
+  const points: Point[] = [];
+  const delays: number[] = [];
+
+  // Generate base path using Bezier curves
+  const basePath = config.useBezier ? generateBezierPath(start, end) : generateLinearPath(start, end);
+
+  // Calculate distance for speed profiling
+  const totalDistance = calculatePathLength(basePath);
+  const numSteps = basePath.length;
+
+  // Generate speed profile (acceleration/deceleration)
+  const speeds = generateSpeedProfile(numSteps, totalDistance, config);
+
+  for (let i = 0; i < basePath.length; i++) {
+    let point = { ...basePath[i] };
+
+    // Add micro-jitter for natural hand tremor effect
+    if (config.addJitter) {
+      point = {
+        x: point.x + (Math.random() - 0.5) * 2 * config.jitterAmplitude,
+        y: point.y + (Math.random() - 0.5) * 2 * config.jitterAmplitude
+      };
+    }
+
+    points.push(point);
+
+    // Calculate delay based on speed profile
+    const baseDelay = config.baseDelay;
+    let delay = baseDelay;
+
+    if (config.variableSpeed && speeds[i] !== undefined) {
+      // Slower at start and end (acceleration/deceleration)
+      const speedFactor = speeds[i];
+      delay = baseDelay / speedFactor;
+    }
+
+    // Add natural variation to delay
+    delay = randomDelay(delay, delay * 0.2);
+
+    delays.push(Math.round(delay));
+  }
+
+  return { points, delays };
+}
+
+// Generate linear path (fallback when Bezier is disabled)
+function generateLinearPath(start: Point, end: Point): Point[] {
+  const points: Point[] = [];
+  const steps = randomBetween(20, 40);
+
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    points.push({
+      x: start.x + (end.x - start.x) * t,
+      y: start.y + (end.y - start.y) * t
+    });
+  }
+
+  return points;
+}
+
+// Calculate total path length
+function calculatePathLength(points: Point[]): number {
+  let length = 0;
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i].x - points[i - 1].x;
+    const dy = points[i].y - points[i - 1].y;
+    length += Math.sqrt(dx * dx + dy * dy);
+  }
+  return length;
+}
+
+// Generate speed profile with natural acceleration/deceleration
+function generateSpeedProfile(numSteps: number, totalDistance: number, config: HumanMovementConfig): number[] {
+  const speeds: number[] = [];
+
+  if (!config.acceleration && !config.variableSpeed) {
+    // Constant speed
+    return Array(numSteps).fill(1);
+  }
+
+  // Calculate acceleration phases
+  const accelPhase = Math.floor(numSteps * 0.2); // First 20% for acceleration
+  const decelPhase = Math.floor(numSteps * 0.2); // Last 20% for deceleration
+  const cruisePhase = numSteps - accelPhase - decelPhase;
+
+  // Speed profile: slow start, fast middle, slow end
+  const maxSpeed = 2.5; // Peak speed multiplier
+  const minSpeed = 0.3; // Starting/ending speed
+
+  for (let i = 0; i < numSteps; i++) {
+    let speed: number;
+
+    if (i < accelPhase) {
+      // Acceleration phase: ease-in
+      const t = i / accelPhase;
+      speed = minSpeed + (maxSpeed - minSpeed) * easeInOut(t);
+    } else if (i < accelPhase + cruisePhase) {
+      // Cruise phase: near max speed with slight variation
+      const cruiseT = (i - accelPhase) / cruisePhase;
+      // Add slight sine wave for natural variation
+      speed = maxSpeed * (0.9 + 0.1 * Math.sin(cruiseT * Math.PI * 4));
+    } else {
+      // Deceleration phase: ease-out
+      const t = (i - accelPhase - cruisePhase) / decelPhase;
+      speed = maxSpeed - (maxSpeed - minSpeed) * easeInOut(t);
+    }
+
+    speeds.push(Math.max(0.2, speed));
+  }
+
+  return speeds;
+}
+
+// Ease-in-out function for smooth acceleration/deceleration
+function easeInOut(t: number): number {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 }
 
 // Export sleep utility
