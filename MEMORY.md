@@ -31,6 +31,11 @@
   - frontend-dev
   - qa-engineer
   - devops
+- **⚠️ WINDOWS BUG FIXED (2026-03-28):**
+  - Original `subprocess_backend.py` used POSIX syntax (`shlex.quote()`, `;` separator)
+  - Incompatible with Windows cmd.exe (needs `&` separator, double quotes)
+  - **FIX APPLIED:** Patched file written at 03:10 - needs verification
+  - Agents spawned correctly now (pending test)
 
 ### OpenClaw (SEPARATE - DO NOT MODIFY)
 - **Location**: `C:\Users\kevin\.openclaw`
@@ -140,3 +145,19 @@ These platforms let AI agents:
 ### 3. NEVER EXPOSE USER'S API KEYS PUBLICLY
 - Chirper.ai agents are PUBLIC - using personal API keys would expose them
 - Always use platform's free/default models for public agents
+
+### 4. ⚠️ ClawTeam Windows Spawn Bug (FIX APPLIED 03:10 - NEEDS TESTING)
+**Location**: `subprocess_backend.py` lines 85-95
+**Bug**: Uses POSIX shell syntax (`shlex.quote()`, `;` separator) which FAILS on Windows cmd.exe
+**Result**: All spawned agents crash IMMEDIATELY - dashboard shows stale "active" state
+**Fix Applied**: New `subprocess_backend.py` written (6832 bytes) with:
+- `_is_windows()` helper
+- `_windows_quote()` for proper cmd.exe quoting  
+- `_build_windows_shell_cmd()` using `&` separator
+- npm directory added to PATH
+**Status**: FIX WRITTEN - needs testing to verify agents spawn correctly
+
+### 5. Dashboard Shows STALE DATA
+- spawn_registry.json contains old PIDs - processes crashed hours ago
+- "Active agents" display ≠ actual running processes
+- Must check `Get-WmiObject Win32_Process` to see real state
