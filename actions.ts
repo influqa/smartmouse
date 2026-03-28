@@ -17,6 +17,42 @@ const execAsync = promisify(exec);
 // Configuration for human-like movements
 const HUMAN_MOVEMENT_ENABLED = true;
 
+// Execute human-like mouse movement using Bezier curves
+async function executeHumanMove(startX: number, startY: number, endX: number, endY: number): Promise<void> {
+  const { generateHumanPath, sleep } = await import('./human-behavior');
+  
+  const { points, delays } = generateHumanPath(
+    { x: startX, y: startY },
+    { x: endX, y: endY },
+    {
+      useBezier: true,
+      addJitter: true,
+      jitterAmplitude: 1.2,
+      variableSpeed: true,
+      baseDelay: 6,
+      acceleration: true
+    }
+  );
+
+  // Execute the movement
+  for (let i = 0; i < points.length; i++) {
+    const point = points[i];
+    await runPowerShell(`
+      $sig = @"
+      [DllImport("user32.dll")]
+      public static extern bool SetCursorPos(int X, int Y);
+"@;
+      $type = Add-Type -MemberDefinition $sig -Name NativeMouse -Namespace SmartMouse -PassThru;
+      [SmartMouse.NativeMouse]::SetCursorPos(${Math.round(point.x)}, ${Math.round(point.y)}) | Out-Null;
+    `);
+    
+    // Add delay between steps
+    if (i < delays.length) {
+      await sleep(delays[i]);
+    }
+  }
+}
+
 export interface ActionResult {
   success: boolean;
   action: string;
@@ -177,7 +213,7 @@ export async function click(
   }
 }
 
-export async function typeText(text: string): Promise<ActionResult> {
+export async function typeText(text: string, useHumanTiming: boolean = true): Promise<ActionResult> {
   try {
     if (isWindows) {
       const normalized = text.replace(/\r\n/g, '\n');
@@ -187,14 +223,33 @@ export async function typeText(text: string): Promise<ActionResult> {
       // For single keys or short control strings fall back to SendKeys.
       const hasNewline = normalized.includes('\n');
       if (!hasNewline && normalized.length > 1) {
-        // Set clipboard content, then Ctrl+V to paste
-        const escaped = normalized.replace(/'/g, "''");
-        await runPowerShell(`
-          Add-Type -AssemblyName System.Windows.Forms;
-          [System.Windows.Forms.Clipboard]::SetText(${psSingleQuoted(escaped)});
-          Start-Sleep -Milliseconds 80;
-          [System.Windows.Forms.SendKeys]::SendWait('^v');
-        `);
+        if (HUMAN_MOVEMENT_ENABLED && useHumanTiming && normalized.length <= 20) {
+          // Human-like typing for short texts - type character by character with natural timing
+          const { getTypingDelay, sleep } = await import('./human-behavior');
+          
+          for (const char of normalized) {
+            const escapedChar = char
+              .replace(/'/g, "''")
+              .replace(/([+^%~(){}\[\]])/g, '{$1}');
+            
+            await runPowerShell(`
+              Add-Type -AssemblyName System.Windows.Forms;
+              [System.Windows.Forms.SendKeys]::SendWait(${psSingleQuoted(escapedChar)});
+            `);
+            
+            // Add human-like delay between keystrokes
+            await sleep(getTypingDelay());
+          }
+        } else {
+          // Set clipboard content, then Ctrl+V to paste (faster for long text)
+          const escaped = normalized.replace(/'/g, "''");
+          await runPowerShell(`
+            Add-Type -AssemblyName System.Windows.Forms;
+            [System.Windows.Forms.Clipboard]::SetText(${psSingleQuoted(escaped)});
+            Start-Sleep -Milliseconds 80;
+            [System.Windows.Forms.SendKeys]::SendWait('^v');
+          `);
+        }
       } else {
         const escapedSendKeys = normalized
           .replace(/'/g, "''")
@@ -268,11 +323,9 @@ export async function hotkey(combo: string[]): Promise<ActionResult> {
   }
 }
 
-export async function scroll(direction: 'up' | 'down', amount: number = 3): Promise<ActionResult> {
+export async function scroll(direction: 'up' | 'down', amount: number = 3, useHumanPattern: boolean = true): Promise<ActionResult> {
   try {
     if (isWindows) {
-      const delta = direction === 'up' ? 120 : -120;
-      const steps = Math.max(1, Math.min(20, Math.round(amount)));
       // First move cursor to screen center so the scroll lands on the active page content
       await runPowerShell(`
         $posSig = @"
@@ -284,11 +337,47 @@ export async function scroll(direction: 'up' | 'down', amount: number = 3): Prom
         $type = Add-Type -MemberDefinition $posSig -Name NativeMouse -Namespace SmartMouseScroll -PassThru;
         [SmartMouseScroll.NativeMouse]::SetCursorPos(960, 540) | Out-Null;
         Start-Sleep -Milliseconds 80;
-        for ($i = 0; $i -lt ${steps}; $i++) {
-          [SmartMouseScroll.NativeMouse]::mouse_event(0x0800, 0, 0, ${delta}, 0);
-          Start-Sleep -Milliseconds 60;
-        }
       `);
+
+      if (HUMAN_MOVEMENT_ENABLED && useHumanPattern) {
+        // Use human-like scroll pattern with acceleration
+        const { generateScrollPattern, sleep } = await import('./human-behavior');
+        const { delays, amounts } = generateScrollPattern(Math.abs(amount), direction);
+        
+        for (let i = 0; i < delays.length; i++) {
+          const delta = direction === 'up' ? 120 : -120;
+          const stepAmount = Math.round(Math.abs(amounts[i]));
+          
+          for (let j = 0; j < stepAmount; j++) {
+            await runPowerShell(`
+              $sig = @"
+              [DllImport("user32.dll")]
+              public static extern void mouse_event(int flags, int dx, int dy, int cButtons, int dwExtraInfo);
+"@;
+              $type = Add-Type -MemberDefinition $sig -Name NativeMouse -Namespace SmartMouseScroll -PassThru;
+              [SmartMouseScroll.NativeMouse]::mouse_event(0x0800, 0, 0, ${delta}, 0);
+            `);
+          }
+          
+          await sleep(delays[i]);
+        }
+      } else {
+        // Standard scroll (robotic, uniform)
+        const delta = direction === 'up' ? 120 : -120;
+        const steps = Math.max(1, Math.min(20, Math.round(amount)));
+        
+        await runPowerShell(`
+          $sig = @"
+          [DllImport("user32.dll")]
+          public static extern void mouse_event(int flags, int dx, int dy, int cButtons, int dwExtraInfo);
+"@;
+          $type = Add-Type -MemberDefinition $sig -Name NativeMouse -Namespace SmartMouseScroll -PassThru;
+          for ($i = 0; $i -lt ${steps}; $i++) {
+            [SmartMouseScroll.NativeMouse]::mouse_event(0x0800, 0, 0, ${delta}, 0);
+            Start-Sleep -Milliseconds 60;
+          }
+        `);
+      }
     }
     return { success: true, action: 'scroll', message: `Scrolled ${direction} (${amount})`, timestamp: Date.now() };
   } catch (e: any) {

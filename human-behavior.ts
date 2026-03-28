@@ -11,8 +11,6 @@
  * - Human-like timing patterns
  */
 
-import { getCursorPosition, moveMouse } from './actions';
-
 // Random number between min and max
 export function randomBetween(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -171,32 +169,6 @@ export function generateHumanPath(
   const delays = speeds.map(speed => calculateStepDelay(baseDelay, speed));
 
   return { points, delays };
-}
-
-// Execute human-like mouse movement
-export async function humanMoveMouse(startX: number, startY: number, endX: number, endY: number): Promise<void> {
-  const start: Point = { x: startX, y: startY };
-  const end: Point = { x: endX, y: endY };
-  
-  const { points, delays } = generateHumanPath(start, end, {
-    useBezier: true,
-    addJitter: true,
-    jitterAmplitude: 1.2,
-    variableSpeed: true,
-    baseDelay: 6,
-    acceleration: true
-  });
-
-  // Execute the movement
-  for (let i = 0; i < points.length; i++) {
-    const point = points[i];
-    await moveMouse(Math.round(point.x), Math.round(point.y));
-    
-    // Add delay between steps
-    if (i < delays.length) {
-      await sleep(delays[i]);
-    }
-  }
 }
 
 // Human-like typing delay between keystrokes
