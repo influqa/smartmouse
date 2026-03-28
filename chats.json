@@ -1,0 +1,38 @@
+{
+  "chats": [
+    {
+      "channel": "console",
+      "created_at": "2026-03-26T00:26:41.393849Z",
+      "id": "bc95b626-278d-486d-b7b2-033c9b922d77",
+      "meta": {},
+      "name": "Let's star",
+      "session_id": "1774484801174",
+      "status": "idle",
+      "updated_at": "2026-03-26T00:27:14.146436Z",
+      "user_id": "default"
+    },
+    {
+      "channel": "console",
+      "created_at": "2026-03-27T16:08:24.168583Z",
+      "id": "2433291d-adb6-46f1-8268-89d40de4d4c3",
+      "meta": {},
+      "name": "check this",
+      "session_id": "1774627692128",
+      "status": "idle",
+      "updated_at": "2026-03-27T23:28:43.488374Z",
+      "user_id": "default"
+    },
+    {
+      "channel": "console",
+      "created_at": "2026-03-28T00:08:11.146225Z",
+      "id": "dfbde2dd-2dfc-4aaf-a7cf-beb215e09353",
+      "meta": {},
+      "name": "remove all",
+      "session_id": "1774656399452",
+      "status": "idle",
+      "updated_at": "2026-03-28T00:29:12.890923Z",
+      "user_id": "default"
+    }
+  ],
+  "version": 1
+}
