@@ -147,7 +147,7 @@ export async function moveMouse(x: number, y: number, useHumanMovement: boolean 
         const startX = currentPos.success && currentPos.x !== null ? currentPos.x : 0;
         const startY = currentPos.success && currentPos.y !== null ? currentPos.y : 0;
         
-        await humanMoveMouse(startX, startY, Math.round(x), Math.round(y));
+        await executeHumanMove(startX, startY, Math.round(x), Math.round(y));
       } else {
         // Direct movement (robotic, instant)
         await runPowerShell(`
