@@ -4,191 +4,455 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartMouse Dashboard</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-        }
-        .status {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 5px;
-        }
-        .status-item {
-            text-align: center;
-        }
-        .status-value {
-            font-weight: bold;
-            font-size: 1.2em;
-        }
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        input, button {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        input {
-            flex: 1;
-            min-width: 300px;
-        }
-        button {
-            background: #007bff;
-            color: white;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        .log {
-            height: 300px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            padding: 10px;
-            background: #f9f9f9;
-            font-family: monospace;
-            white-space: pre-wrap;
-        }
-        .screenshot-container {
-            margin-top: 20px;
-            text-align: center;
-        }
-        .screenshot {
-            max-width: 100%;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .detection-info {
-            margin-top: 10px;
-            padding: 10px;
-            background: #e7f3ff;
-            border-radius: 4px;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-        <div class="container">
-            <h1>🐭 SmartMouse Dashboard</h1>
-            
-            <div class="status">
-                <div class="status-item">
-                    <div>Vision Ready</div>
-                    <div id="vision-status" class="status-value">-</div>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="mouse-icon">🐭</span>
+                <h1>SmartMouse Dashboard</h1>
+                <span class="version">v2.0</span>
+            </div>
+            <div class="status-bar">
+                <div class="status-item vision-ready" id="vision-status-item">
+                    <span class="status-dot"></span>
+                    <span>Vision</span>
                 </div>
-                <div class="status-item">
-                    <div>API Configured</div>
-                    <div id="api-status" class="status-value">-</div>
+                <div class="status-item api-ready" id="api-status-item">
+                    <span class="status-dot"></span>
+                    <span>API</span>
                 </div>
-                <div class="status-item">
-                    <div>Is Running</div>
-                    <div id="running-status" class="status-value">-</div>
-                </div>
-                <div class="status-item">
-                    <div>Iteration</div>
-                    <div id="iteration-status" class="status-value">-</div>
+                <div class="status-item server-ready" id="server-status-item">
+                    <span class="status-dot"></span>
+                    <span>Server</span>
                 </div>
             </div>
-        
-        <div class="controls">
-            <input type="text" id="goal-input" placeholder="Enter your goal (e.g., 'Open Chrome and search for cats')">
-            <button onclick="runGoal()">Run Goal</button>
-            <button onclick="stopGoal()" id="stop-btn" disabled>Stop</button>
-            <button onclick="takeScreenshot()">Take Screenshot</button>
-            <button onclick="initVision()">Init Vision</button>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Panel - Chat & Controls -->
+            <div class="chat-container">
+                <div class="chat-history" id="chat-history">
+                    <div class="message bot-message">
+                        <div class="message-avatar">🤖</div>
+                        <div class="message-content">
+                            <h3>SmartMouse Assistant</h3>
+                            <p>Welcome! I'm ready to help you automate mouse interactions. Enter a goal to get started.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-area">
+                    <textarea id="goal-input" placeholder="Enter your goal (e.g., 'Open Chrome and search for cats', 'Click the login button', 'Leave 3 comments on Instagram')"></textarea>
+                    <button class="send-btn" onclick="runGoal()">
+                        <span>🚀</span>
+                        <span>Run</span>
+                    </button>
+                </div>
+                
+                <div class="controls">
+                    <button class="control-btn danger" onclick="stopGoal()" id="stop-btn" disabled>
+                        <span>⏹️</span>
+                        <span>Stop</span>
+                    </button>
+                    <button class="control-btn secondary" onclick="takeScreenshot()">
+                        <span>📸</span>
+                        <span>Screenshot</span>
+                    </button>
+                    <button class="control-btn secondary" onclick="initVision()">
+                        <span>👁️</span>
+                        <span>Init Vision</span>
+                    </button>
+                    <button class="control-btn secondary" onclick="toggleRecording()">
+                        <span>🔴</span>
+                        <span id="record-btn-text">Record</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Panel - Visualizations -->
+            <div class="sidebar">
+                <!-- Mouse Tracking Panel -->
+                <div class="panel">
+                    <h3>🖱️ Mouse Tracking</h3>
+                    <div class="tracking-info">
+                        <div class="tracking-row">
+                            <span class="tracking-label">Position:</span>
+                            <span class="tracking-value" id="mouse-position">--</span>
+                        </div>
+                        <div class="tracking-row">
+                            <span class="tracking-label">Clicks:</span>
+                            <span class="tracking-value" id="click-count">0</span>
+                        </div>
+                        <div class="tracking-row">
+                            <span class="tracking-label">Movement:</span>
+                            <span class="tracking-value" id="movement-distance">0 px</span>
+                        </div>
+                        <div class="tracking-row">
+                            <span class="tracking-label">Last Action:</span>
+                            <span class="tracking-value" id="last-action">--</span>
+                        </div>
+                    </div>
+                    <canvas id="mouse-path-canvas" class="mouse-path-canvas"></canvas>
+                </div>
+
+                <!-- AI Predictions Panel -->
+                <div class="panel">
+                    <h3>🧠 AI Predictions</h3>
+                    <div class="predictions-list" id="predictions-list">
+                        <div class="prediction-item">
+                            <span class="prediction-icon">🎯</span>
+                            <div class="prediction-content">
+                                <div class="prediction-text">Waiting for goal...</div>
+                                <div class="prediction-confidence">--</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="model-info">
+                        <div class="model-row">
+                            <span class="model-label">Model:</span>
+                            <span class="model-value" id="ai-model">--</span>
+                        </div>
+                        <div class="model-row">
+                            <span class="model-label">Iteration:</span>
+                            <span class="model-value" id="iteration-count">0</span>
+                        </div>
+                        <div class="model-row">
+                            <span class="model-label">Objects:</span>
+                            <span class="model-value" id="objects-detected">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Learning Progress Panel -->
+                <div class="panel">
+                    <h3>📈 Learning Progress</h3>
+                    <div class="progress-stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="total-tasks">0</div>
+                            <div class="stat-label">Total Tasks</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="success-rate">--</div>
+                            <div class="stat-label">Success Rate</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="avg-iterations">--</div>
+                            <div class="stat-label">Avg Iterations</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="patterns-learned">0</div>
+                            <div class="stat-label">Patterns</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-label">Session Progress</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="session-progress" style="width: 0%"></div>
+                        </div>
+                        <div class="progress-bar-stats">
+                            <span id="session-completed">0</span> / <span id="session-total">0</span> completed
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detected Objects Panel -->
+                <div class="panel">
+                    <h3>🔍 Detected Objects</h3>
+                    <div class="objects-list" id="objects-list">
+                        <div class="object-placeholder">No objects detected yet</div>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <div class="log" id="log">SmartMouse dashboard loaded. Connect to the backend to start.</div>
-        
-        <div class="screenshot-container">
-            <img id="screenshot-img" class="screenshot" style="display:none;" alt="Latest screenshot">
-            <div id="detection-info" class="detection-info" style="display:none;"></div>
+
+        <!-- Screenshot Preview -->
+        <div class="screenshot-panel" id="screenshot-panel" style="display:none;">
+            <div class="screenshot-header">
+                <h3>📸 Latest Screenshot</h3>
+                <button class="close-btn" onclick="closeScreenshot()">✕</button>
+            </div>
+            <div class="screenshot-content">
+                <img id="screenshot-img" class="screenshot" alt="Latest screenshot">
+                <div class="screenshot-metadata">
+                    <div class="metadata-row">
+                        <span class="metadata-label">Screen Size:</span>
+                        <span class="metadata-value" id="screen-size">--</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="metadata-label">Objects Detected:</span>
+                        <span class="metadata-value" id="object-count">0</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="metadata-label">Timestamp:</span>
+                        <span class="metadata-value" id="screenshot-time">--</span>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
+
+    <!-- Iteration Indicator -->
+    <div class="iteration-indicator" id="iteration-indicator">
+        Iteration: <span id="iteration-display">0</span>
     </div>
 
     <script>
         const API_BASE = 'http://localhost:7891';
-        let logDiv = document.getElementById('log');
         let isRunning = false;
+        let isRecording = false;
+        let mousePath = [];
+        let totalClicks = 0;
+        let totalMovement = 0;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let sessionStats = {
+            completed: 0,
+            total: 0,
+            totalIterations: 0,
+            successfulTasks: 0
+        };
+
+        // Track mouse movement
+        document.addEventListener('mousemove', (e) => {
+            const now = Date.now();
+            mousePath.push({ x: e.clientX, y: e.clientY, time: now });
+            
+            // Keep only last 100 points
+            if (mousePath.length > 100) {
+                mousePath = mousePath.slice(-100);
+            }
+            
+            // Update position display
+            document.getElementById('mouse-position').textContent = `(${e.clientX}, ${e.clientY})`;
+            
+            // Calculate movement
+            if (lastMouseX && lastMouseY) {
+                const dx = e.clientX - lastMouseX;
+                const dy = e.clientY - lastMouseY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                totalMovement += distance;
+                document.getElementById('movement-distance').textContent = `${Math.round(totalMovement)} px`;
+            }
+            
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            
+            // Draw path
+            drawMousePath();
+        });
+
+        // Track clicks
+        document.addEventListener('click', (e) => {
+            totalClicks++;
+            document.getElementById('click-count').textContent = totalClicks;
+            document.getElementById('last-action').textContent = `Click at (${e.clientX}, ${e.clientY})`;
+        });
+
+        // Draw mouse path on canvas
+        function drawMousePath() {
+            const canvas = document.getElementById('mouse-path-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (mousePath.length < 2) return;
+            
+            // Draw path
+            ctx.beginPath();
+            ctx.moveTo(mousePath[0].x % canvas.width, mousePath[0].y % canvas.height);
+            
+            for (let i = 1; i < mousePath.length; i++) {
+                const point = mousePath[i];
+                ctx.lineTo(point.x % canvas.width, point.y % canvas.height);
+            }
+            
+            // Style path
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
+            gradient.addColorStop(1, 'rgba(16, 185, 129, 0.8)');
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+        }
 
         // Update status every 2 seconds
         setInterval(updateStatus, 2000);
-        updateStatus(); // Initial update
+        updateStatus();
 
-        function addToLog(message) {
-            logDiv.textContent += '\n' + new Date().toLocaleTimeString() + ' - ' + message;
-            logDiv.scrollTop = logDiv.scrollHeight;
+        function addToChat(message, type = 'bot') {
+            const chatHistory = document.getElementById('chat-history');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type === 'user' ? 'user-message' : 'bot-message'}`;
+            
+            const avatar = type === 'user' ? '👤' : '🤖';
+            const title = type === 'user' ? 'You' : 'SmartMouse Assistant';
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">
+                    <h3>${title}</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+            
+            chatHistory.appendChild(messageDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
         async function updateStatus() {
             try {
                 const response = await fetch(API_BASE + '/status');
                 const data = await response.json();
+
+                // Update status indicators
+                const visionItem = document.getElementById('vision-status-item');
+                const apiItem = document.getElementById('api-status-item');
+                const serverItem = document.getElementById('server-status-item');
                 
-                document.getElementById('vision-status').textContent = data.vision_ready ? '✅' : '❌';
-                document.getElementById('api-status').textContent = data.api_configured ? '✅' : '❌';
-                document.getElementById('running-status').textContent = data.is_running ? '✅' : '❌';
-                document.getElementById('iteration-status').textContent = data.iteration || 0;
+                visionItem.className = `status-item ${data.vision_ready ? 'vision-ready' : ''}`;
+                apiItem.className = `status-item ${data.api_configured ? 'api-ready' : ''}`;
+                serverItem.className = `status-item ${data.is_running ? 'server-ready' : ''}`;
+
+                // Update iteration
+                const iteration = data.iteration || 0;
+                document.getElementById('iteration-count').textContent = iteration;
+                document.getElementById('iteration-display').textContent = iteration;
                 
+                const indicator = document.getElementById('iteration-indicator');
+                if (data.is_running) {
+                    indicator.classList.add('active');
+                } else {
+                    indicator.classList.remove('active');
+                }
+
+                // Update objects detected
+                const objectsCount = data.detected_objects?.length || 0;
+                document.getElementById('objects-detected').textContent = objectsCount;
+                document.getElementById('object-count').textContent = objectsCount;
+                
+                // Update objects list
+                updateObjectsList(data.detected_objects || []);
+
+                // Update running state
                 if (data.is_running !== isRunning) {
                     isRunning = data.is_running;
                     document.getElementById('stop-btn').disabled = !isRunning;
                 }
-                
+
+                // Update model info
+                if (data.model) {
+                    document.getElementById('ai-model').textContent = data.model;
+                }
+
                 if (data.last_error) {
-                    addToLog('Error: ' + data.last_error);
+                    addToChat('Error: ' + data.last_error, 'bot');
                 }
             } catch (e) {
                 console.error('Status update failed:', e);
+                // Show offline status
+                document.getElementById('vision-status-item').className = 'status-item';
+                document.getElementById('api-status-item').className = 'status-item';
+                document.getElementById('server-status-item').className = 'status-item';
             }
         }
 
-        async function runGoal() {
-            const goal = document.getElementById('goal-input').value.trim();
-            if (!goal) {
-                addToLog('Please enter a goal');
+        function updateObjectsList(objects) {
+            const objectsList = document.getElementById('objects-list');
+            
+            if (objects.length === 0) {
+                objectsList.innerHTML = '<div class="object-placeholder">No objects detected yet</div>';
                 return;
             }
             
+            // Group by type
+            const grouped = {};
+            objects.forEach(obj => {
+                const type = obj.type || obj.label || 'unknown';
+                if (!grouped[type]) {
+                    grouped[type] = [];
+                }
+                grouped[type].push(obj);
+            });
+            
+            let html = '';
+            for (const [type, items] of Object.entries(grouped)) {
+                const showItems = items.slice(0, 3);
+                const moreCount = items.length - 3;
+                
+                html += `
+                    <div class="object-group">
+                        <strong>${type}</strong>
+                        <span class="count">(${items.length})</span>
+                        <div class="object-items">
+                `;
+                
+                showItems.forEach((item, idx) => {
+                    const coords = item.box ? 
+                        `(${Math.round(item.box[0])}, ${Math.round(item.box[1])})` : 
+                        `(${Math.round(item.x || 0)}, ${Math.round(item.y || 0)})`;
+                    const conf = Math.round((item.score || item.confidence || 0) * 100);
+                    
+                    html += `
+                        <div class="object-item">
+                            <span>${item.label || type} ${idx + 1}</span>
+                            <span class="coords">${coords}</span>
+                            <span class="conf">${conf}%</span>
+                        </div>
+                    `;
+                });
+                
+                if (moreCount > 0) {
+                    html += `<div class="more-items">+${moreCount} more...</div>`;
+                }
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            objectsList.innerHTML = html;
+        }
+
+        async function runGoal() {
+            const goalInput = document.getElementById('goal-input');
+            const goal = goalInput.value.trim();
+            if (!goal) {
+                addToChat('Please enter a goal', 'bot');
+                return;
+            }
+
+            addToChat(goal, 'user');
+            goalInput.value = '';
+
             try {
                 const response = await fetch(API_BASE + '/run', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ goal: goal })
                 });
-                
+
                 const data = await response.json();
                 if (data.success) {
-                    addToLog('✅ Started goal: ' + goal);
+                    addToChat('✅ Started goal: ' + goal, 'bot');
+                    sessionStats.total++;
+                    updateSessionProgress();
                 } else {
-                    addToLog('❌ Failed to start: ' + data.error);
+                    addToChat('❌ Failed to start: ' + data.error, 'bot');
                 }
             } catch (e) {
-                addToLog('❌ Error starting goal: ' + e.message);
+                addToChat('❌ Error starting goal: ' + e.message, 'bot');
             }
         }
 
@@ -197,64 +461,116 @@
                 const response = await fetch(API_BASE + '/stop', {
                     method: 'POST'
                 });
-                
+
                 const data = await response.json();
-                addToLog('⏹️ Stopped: ' + data.message);
+                addToChat('⏹️ Stopped: ' + data.message, 'bot');
             } catch (e) {
-                addToLog('❌ Error stopping: ' + e.message);
+                addToChat('❌ Error stopping: ' + e.message, 'bot');
             }
         }
 
         async function takeScreenshot() {
-            addToLog('📸 Taking screenshot...');
+            addToChat('📸 Taking screenshot...', 'bot');
             try {
                 const response = await fetch(API_BASE + '/screenshot');
                 const data = await response.json();
-                
+
                 if (data.screenshot_path) {
-                    // Display the screenshot
-                    document.getElementById('screenshot-img').src = 'file://' + data.screenshot_path;
-                    document.getElementById('screenshot-img').style.display = 'block';
+                    // Show screenshot panel
+                    const panel = document.getElementById('screenshot-panel');
+                    const img = document.getElementById('screenshot-img');
                     
-                    // Display detection info
-                    const detectionInfo = document.getElementById('detection-info');
-                    detectionInfo.innerHTML = `
-                        <strong>Screenshot Info:</strong><br>
-                        Size: ${data.screen_size.width}x${data.screen_size.height}<br>
-                        Objects detected: ${data.detected_objects.length}<br>
-                        <details>
-                            <summary>View Details</summary>
-                            <pre>${JSON.stringify(data.detected_objects, null, 2)}</pre>
-                        </details>
-                    `;
-                    detectionInfo.style.display = 'block';
+                    img.src = 'file://' + data.screenshot_path;
+                    img.style.display = 'block';
+                    panel.style.display = 'block';
                     
-                    addToLog('✅ Screenshot taken with ' + data.detected_objects.length + ' objects detected');
+                    // Update metadata
+                    document.getElementById('screen-size').textContent = 
+                        `${data.screen_size?.width || 0}x${data.screen_size?.height || 0}`;
+                    document.getElementById('screenshot-time').textContent = 
+                        new Date().toLocaleTimeString();
+                    
+                    addToChat('✅ Screenshot taken with ' + (data.detected_objects?.length || 0) + ' objects detected', 'bot');
                 } else {
-                    addToLog('❌ Screenshot failed: ' + data.error);
+                    addToChat('❌ Screenshot failed: ' + data.error, 'bot');
                 }
             } catch (e) {
-                addToLog('❌ Error taking screenshot: ' + e.message);
+                addToChat('❌ Error taking screenshot: ' + e.message, 'bot');
             }
         }
 
+        function closeScreenshot() {
+            document.getElementById('screenshot-panel').style.display = 'none';
+        }
+
         async function initVision() {
-            addToLog('🔄 Initializing vision model...');
+            addToChat('🔄 Initializing vision model...', 'bot');
             try {
                 const response = await fetch(API_BASE + '/init', {
                     method: 'POST'
                 });
-                
+
                 const data = await response.json();
                 if (data.success) {
-                    addToLog('✅ Vision model loaded');
+                    addToChat('✅ Vision model loaded', 'bot');
                 } else {
-                    addToLog('❌ Vision init failed: ' + data.message);
+                    addToChat('❌ Vision init failed: ' + data.message, 'bot');
                 }
             } catch (e) {
-                addToLog('❌ Error initializing vision: ' + e.message);
+                addToChat('❌ Error initializing vision: ' + e.message, 'bot');
             }
         }
+
+        function toggleRecording() {
+            isRecording = !isRecording;
+            const btnText = document.getElementById('record-btn-text');
+            btnText.textContent = isRecording ? 'Stop' : 'Record';
+            
+            if (isRecording) {
+                addToChat('🔴 Recording started', 'bot');
+                mousePath = [];
+                totalClicks = 0;
+                totalMovement = 0;
+                document.getElementById('click-count').textContent = '0';
+                document.getElementById('movement-distance').textContent = '0 px';
+            } else {
+                addToChat('⏹️ Recording stopped', 'bot');
+            }
+        }
+
+        function updateSessionProgress() {
+            document.getElementById('session-total').textContent = sessionStats.total;
+            document.getElementById('session-completed').textContent = sessionStats.completed;
+            
+            const percentage = sessionStats.total > 0 
+                ? (sessionStats.completed / sessionStats.total) * 100 
+                : 0;
+            document.getElementById('session-progress').style.width = percentage + '%';
+            
+            // Update stats
+            document.getElementById('total-tasks').textContent = sessionStats.total;
+            
+            if (sessionStats.total > 0) {
+                const rate = Math.round((sessionStats.successfulTasks / sessionStats.total) * 100);
+                document.getElementById('success-rate').textContent = rate + '%';
+            }
+            
+            if (sessionStats.completed > 0) {
+                const avg = (sessionStats.totalIterations / sessionStats.completed).toFixed(1);
+                document.getElementById('avg-iterations').textContent = avg;
+            }
+        }
+
+        // Handle Enter key in textarea
+        document.getElementById('goal-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                runGoal();
+            }
+        });
+
+        // Initialize canvas
+        window.addEventListener('resize', drawMousePath);
+        drawMousePath();
     </script>
 </body>
 </html>
